@@ -16,17 +16,66 @@ class DiscordDatabase:
         self.__constr    = constr
         self.__stay_open = stay_open
     
-    def connect(self, constr: str) -> None:
+    def connect(self, constr: str, ensure_create: bool = True) -> None:
         self.__ensure_dir(constr)
         self.conn = sqlite3.connect(constr)
+        if ensure_create:
+            self.ensure_create()
         self.connected = True
+    
+    def ensure_create(self) -> None:
+        if not self.connected:
+            raise ValueError("Database not connected.")
+        c = self.conn.cursor()
+        c.execute(
+            """
+                CREATE TABLE IF NOT EXISTS messages
+                (
+                    id                   INTEGER PRIMARY KEY,
+                    message_id           INTEGER,
+                    message_content      TEXT,
+                    author_name          TEXT,
+                    author_display       TEXT,
+                    author_discriminator INTEGER,
+                    author_id            INTEGER
+                )
+            """)
+        c.commit()
     
     def disconnect(self) -> None:
         self.conn.close()
         self.connected = False
     
     def save(self, message: discord.Message) -> None:
-        self.log.info(message.content)
+        if not self.connected:
+            raise ValueError("Database not connected.")
+        entities = (
+                message.id,
+                message.content,
+                message.author.name,
+                message.author.display_name,
+                message.author.discriminator,
+                message.author.id
+            )
+        c = self.conn.cursor()
+        c.execute(
+            """
+                INSERT INTO messages
+                (
+                    message_id,
+                    message_content,
+                    author_name,
+                    author_display,
+                    author_discriminator,
+                    author_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            entities
+        )
+    
+    def update(self, message: discord.Message) -> None:
+        pass
     
     def __handle_message_recieve(self, sender: object, message: discord.Message) -> None:
         try:
