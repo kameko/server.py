@@ -1,10 +1,12 @@
 
 import discord
 import logging
+from .events import Events
 
 class DiscordHandler(discord.Client):
-    def __init__(self, logger: logging.Logger):
-        self.log = logger
+    def __init__(self, logger: logging.Logger, events: Events):
+        self.log    = logger
+        self.events = events
         super().__init__()
     
     async def on_ready(self) -> None:
@@ -17,6 +19,7 @@ class DiscordHandler(discord.Client):
         self.log.info(message.content)
         
         if message.content == "shutdown":
+            self.events.request_system_shutdown(self)
             await self.change_presence(status=discord.Status.offline)
             await self.close()
             return
