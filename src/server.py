@@ -3,12 +3,13 @@ import logging
 from .discord_handler import DiscordHandler
 
 class Server:
-    def __init__(self):
-        self.setup_logging()
+    def __init__(self, logger: logging.Logger, discord: DiscordHandler):
+        self.log = logger
+        self.discord = discord
+        #self.setup_logging()
     
     def connect(self, token: str):
-        self.dh = DiscordHandler()
-        self.dh.run(token)
+        self.discord.run(token)
     
     def setup_logging(self) -> logging.Logger:
         logger = logging.getLogger("server.py")

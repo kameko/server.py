@@ -3,8 +3,8 @@ import discord
 import logging
 
 class DiscordHandler(discord.Client):
-    def __init__(self):
-        self.log = logging.getLogger("server.py")
+    def __init__(self, logger: logging.Logger):
+        self.log = logger
         super().__init__()
     
     async def on_ready(self) -> None:
