@@ -4,23 +4,23 @@ import time
 import threading
 import asyncio
 from .events import Events
-from .discord_handler import DiscordHandler
+from .discord_connection import DiscordConnection
 
 class Server:
-    def __init__(self, logger: logging.Logger, events: Events, discord: DiscordHandler):
+    def __init__(self, logger: logging.Logger, events: Events, discord: DiscordConnection):
         self.log       = logger
         self.events    = events
         self.discord   = discord
         self.cancelled = False
         self.events.on_system_shutdown(self.__handle_system_shutdown)
     
-    def connect(self, token: str) -> None:
+    def connect_to_discord(self, token: str) -> None:
         self.discord_thread = threading.Thread(target=self.__start_client, args=(token,))
         self.discord_thread.start()
         self.discord_dc_waiter = threading.Thread(target=self.__wait_for_disconnect_request)
         self.discord_dc_waiter.start()
     
-    def disconnect(self) -> None:
+    def disconnect_from_discord(self) -> None:
         self.cancelled = True
     
     def wait_for_shutdown_request(self) -> None:
