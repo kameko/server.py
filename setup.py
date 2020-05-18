@@ -9,7 +9,8 @@ from src.server import Server
 def setup_logger(level) -> logging.Logger:
     logger    = logging.getLogger("server.py")
     handler   = logging.StreamHandler()
-    formatter = logging.Formatter("[%(levelname)s] %(asctime)s - %(name)s: %(message)s")
+    # formatter = logging.Formatter("[%(levelname)s] %(asctime)s - %(name)s: %(message)s")
+    formatter = logging.Formatter("[%(levelname)s] %(asctime)s: %(message)s")
     handler.setFormatter(formatter)
     handler.setLevel(level)
     logger.setLevel(level)
