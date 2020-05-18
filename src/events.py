@@ -6,6 +6,7 @@ class Events:
     def __init__(self):
         self.system_shutdown_callbacks = []
         self.discord_message_recieve_callbacks = []
+        self.discord_message_updated_callbacks = []
     
     # system
     
@@ -24,4 +25,11 @@ class Events:
     def request_on_discord_message_recieve(self, sender: object, message: discord.Message) -> None:
         for callback in self.discord_message_recieve_callbacks:
             callback(sender, message)
+    
+    def on_discord_message_updated(self, callback: Callable[[object, discord.Message, discord.Message], None]) -> None:
+        self.discord_message_updated_callbacks.append(callback)
+    
+    def request_on_discord_message_updated(self, sender: object, old_message: discord.Message, new_message: discord.Message) -> None:
+        for callback in self.discord_message_updated_callbacks:
+            callback(sender, old_message, new_message)
     

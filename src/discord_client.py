@@ -30,8 +30,7 @@ class DiscordClient(discord.Client):
         if message.author == self.user:
             return
         if self.cancelled:
-            await self.change_presence(status=discord.Status.invisible)
-            await self.close()
+            self.disconnect()
             
         block = False
         for command in self.commands:
@@ -40,6 +39,11 @@ class DiscordClient(discord.Client):
                 await command.handle(message)
         if not block:
             self.events.request_on_discord_message_recieve(self, message)
+    
+    def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
+        if message.author == self.user:
+            return
+        self.events.request_on_discord_message_updated(self, before, after)
     
     def __handle_system_shutdown(self, caller: object) -> None:
         self.cancelled = True

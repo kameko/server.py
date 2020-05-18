@@ -13,6 +13,7 @@ class DiscordDatabase:
         self.events    = events
         self.events.on_system_shutdown(self.__handle_system_shutdown)
         self.events.on_discord_message_recieve(self.__handle_message_recieve)
+        self.events.on_discord_message_updated(self.__handle_message_updated)
     
     def configure_event_handler(self, constr: str, stay_open: bool = True) -> None:
         self.__constr    = constr
@@ -185,6 +186,15 @@ class DiscordDatabase:
             if not self.connected:
                 self.connect(self.__constr)
             self.save_message(message)
+        finally:
+            if not self.__stay_open:
+                self.disconnect()
+    
+    def __handle_message_updated(self, sender: object, old_message: discord.Message, new_message: discord.Message) -> None:
+        try:
+            if not self.connected:
+                self.connect(self.__constr)
+            self.update_message_content(new_message)
         finally:
             if not self.__stay_open:
                 self.disconnect()
