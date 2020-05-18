@@ -7,6 +7,7 @@ from .events import Events
 
 class DiscordDatabase:
     def __init__(self, logger: logging.Logger, events: Events):
+        self.conn      = None
         self.connected = False
         self.log       = logger
         self.events    = events
@@ -30,54 +31,151 @@ class DiscordDatabase:
         c = self.conn.cursor()
         c.execute(
             """
-                CREATE TABLE IF NOT EXISTS messages
-                (
-                    id                   INTEGER PRIMARY KEY,
-                    message_id           INTEGER,
-                    message_content      TEXT,
-                    author_name          TEXT,
-                    author_display       TEXT,
-                    author_discriminator INTEGER,
-                    author_id            INTEGER
-                )
+            CREATE TABLE IF NOT EXISTS messages
+            (
+                id                    INTEGER PRIMARY KEY,
+                message_id            INTEGER,
+                message_content       TEXT,
+                creation_time         TEXT,
+                author_id             INTEGER,
+                author_name           TEXT,
+                author_display        TEXT,
+                author_discriminator  INTEGER,
+                channel_id            INTEGER,
+                channel_name          TEXT,
+                guild_id              INTEGER,
+                guild_name            TEXT,
+                number_of_edits       INTEGER,
+                number_of_attachments INTEGER
+            )
             """)
+        c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS message_edit_history
+            (
+                id                    INTEGER PRIMARY KEY,
+                message_id            INTEGER,
+                edit_time             TEXT,
+                revision              INTEGER,
+                new_content           TEXT
+            )
+            """
+        )
+        c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS message_attachment
+            (
+                id                    INTEGER PRIMARY KEY,
+                message_id            INTEGER,
+                url                   TEXT,
+                filename              TEXT,
+                size_bytes            INTEGER
+            )
+            """
+        )
+        c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users
+            (
+                id                    INTEGER PRIMARY KEY,
+                user_id               INTEGER,
+                user_name             TEXT,
+                user_disriminator     INTEGER,
+                guilds_cvs            TEXT,
+                permissions_cvs       TEXT
+            )
+            """
+        )
         self.conn.commit()
     
     def disconnect(self) -> None:
-        self.conn.close()
+        if self.connected and self.conn != None:
+            self.conn.close()
         self.connected = False
     
-    def save(self, message: discord.Message) -> None:
+    def save_message(self, message: discord.Message) -> None:
         if not self.connected:
             raise ValueError("Database not connected.")
         entities = (
                 message.id,
                 message.content,
+                message.created_at.isoformat(timespec='seconds'),
+                message.author.id,
                 message.author.name,
                 message.author.display_name,
                 message.author.discriminator,
-                message.author.id
+                message.channel.id,
+                message.channel.name,
+                message.channel.guild.id,
+                message.channel.guild.name,
+                0,
+                len(message.attachments)
             )
         c = self.conn.cursor()
-        c.execute(
-            """
+        try:
+            c.execute(
+                """
                 INSERT INTO messages
                 (
                     message_id,
                     message_content,
+                    creation_time,
+                    author_id,
                     author_name,
                     author_display,
                     author_discriminator,
-                    author_id
+                    channel_id,
+                    channel_name,
+                    guild_id,
+                    guild_name,
+                    number_of_edits,
+                    number_of_attachments
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            entities
-        )
-        self.conn.commit()
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                entities
+            )
+            if len(message.attachments) > 0:
+                for attach in message.attachments:
+                    attach_entities = (
+                        message.id,
+                        attach.url,
+                        attach.filename,
+                        attach.size
+                    )
+                    c.execute(
+                        """
+                        INSERT INTO message_attachment
+                        (
+                            message_id,
+                            url,
+                            filename,
+                            size_bytes
+                        )
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        attach_entities
+                    )
+            self.conn.commit()
+        except:
+            self.conn.rollback()
+            raise
     
-    def update(self, message: discord.Message) -> None:
-        pass
+    def update_message_content(self, message: discord.Message) -> None:
+        if not self.connected:
+            raise ValueError("Database not connected.")
+        c = self.conn.cursor()
+        try:
+            # TODO: 
+            self.conn.commit()
+        except:
+            self.conn.rollback()
+            raise
+    
+    def commit(self) -> None:
+        if not self.connected:
+            raise ValueError("Database not connected.")
+        self.conn.commit()
     
     def __handle_system_shutdown(self, sender: object) -> None:
         self.disconnect()
@@ -86,7 +184,7 @@ class DiscordDatabase:
         try:
             if not self.connected:
                 self.connect(self.__constr)
-            self.save(message)
+            self.save_message(message)
         finally:
             if not self.__stay_open:
                 self.disconnect()
