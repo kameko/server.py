@@ -2,7 +2,8 @@
 import logging
 from src.events import Events
 from src.discord_database import DiscordDatabase
-from src.discord_connection import DiscordConnection
+from src.discord_client import DiscordClient
+from src.discord_commands.shutdown import ShutdownCommand
 from src.server import Server
 
 def setup_logger(level) -> logging.Logger:
@@ -16,12 +17,16 @@ def setup_logger(level) -> logging.Logger:
     return logger
 
 def setup_depends() -> Server:
-    log        = logging.getLogger("server.py")
-    events     = Events()
-    discord_db = DiscordDatabase(log, events)
+    log          = logging.getLogger("server.py")
+    events       = Events()
+    discord_db   = DiscordDatabase(log, events) # TODO: a database per guild, so database factory
     discord_db.configure_event_handler("./.data/discord/messages.db")
-    discord    = DiscordConnection(log, events)
-    server     = Server(log, events, discord)
+    discord      = DiscordClient(log, events)
+    cmd_shutdown = ShutdownCommand(log, events, discord)
+    discord.commands = [
+        cmd_shutdown
+    ]
+    server       = Server(log, events, discord)
     return server
 
 def read_discord_token() -> str:

@@ -10,6 +10,7 @@ class DiscordDatabase:
         self.connected = False
         self.log       = logger
         self.events    = events
+        self.events.on_system_shutdown(self.__handle_system_shutdown)
         self.events.on_discord_message_recieve(self.__handle_message_recieve)
     
     def configure_event_handler(self, constr: str, stay_open: bool = True) -> None:
@@ -19,9 +20,9 @@ class DiscordDatabase:
     def connect(self, constr: str, ensure_create: bool = True) -> None:
         self.__ensure_dir(constr)
         self.conn = sqlite3.connect(constr)
+        self.connected = True
         if ensure_create:
             self.ensure_create()
-        self.connected = True
     
     def ensure_create(self) -> None:
         if not self.connected:
@@ -40,7 +41,7 @@ class DiscordDatabase:
                     author_id            INTEGER
                 )
             """)
-        c.commit()
+        self.conn.commit()
     
     def disconnect(self) -> None:
         self.conn.close()
@@ -73,9 +74,13 @@ class DiscordDatabase:
             """,
             entities
         )
+        self.conn.commit()
     
     def update(self, message: discord.Message) -> None:
         pass
+    
+    def __handle_system_shutdown(self, sender: object) -> None:
+        self.disconnect()
     
     def __handle_message_recieve(self, sender: object, message: discord.Message) -> None:
         try:
