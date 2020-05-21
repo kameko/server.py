@@ -34,7 +34,7 @@ class DiscordClient(discord.Client):
             
         block = False
         for command in self.commands:
-            if command.detect(message):
+            if await command.detect(message):
                 block = command.block_event
                 await command.handle(message)
         if not block:

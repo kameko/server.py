@@ -11,7 +11,7 @@ class ShutdownCommand(BaseCommand):
         self.discord = discord
         self.block_event = True
     
-    def detect(self, message: discord.Message) -> bool:
+    async def detect(self, message: discord.Message) -> bool:
         if message.content.lower() == "shutdown":
             # TODO: get authorized user names
             return True

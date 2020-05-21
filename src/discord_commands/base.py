@@ -10,8 +10,9 @@ class BaseCommand:
         self.command_name = command_name
         self.block_event = False
     
-    def detect(self, message: discord.Message) -> bool:
+    async def detect(self, message: discord.Message) -> bool:
         raise NotImplementedError("Please Implement this method")
     
     async def handle(self, message: discord.Message) -> None:
         raise NotImplementedError("Please Implement this method")
+    

@@ -162,12 +162,35 @@ class DiscordDatabase:
             self.conn.rollback()
             raise
     
-    def update_message_content(self, message: discord.Message) -> None:
+    def update_message_content(self, old_message: discord.Message, new_message: discord.Message) -> None:
         if not self.connected:
             raise ValueError("Database not connected.")
         c = self.conn.cursor()
         try:
-            # TODO: 
+            # TODO: get old message. if it doesn't exist, return.
+            # then, add old message to message_edit_history.
+            # then, update message's number_of_edits and content
+            c.execute("SELECT * FROM messages WHERE message_id = ?", (new_message.id,))
+            
+            rows = c.fetchmany(1)
+            
+            if len(rows) == 0:
+                self.log.info("Tried to update a message with ID " + str(new_message.id) + " in the database, but it was not found.")
+                return
+            
+            db_msg = rows[0]
+            # TODO: https://docs.python.org/3.8/library/sqlite3.html#row-objects 
+            self.conn.commit()
+        except:
+            self.conn.rollback()
+            raise
+    
+    def save_or_update_discord_user(self, user) -> None:
+        if not self.connected:
+            raise ValueError("Database not connected.")
+        c = self.conn.cursor()
+        try:
+            # TODO: ...
             self.conn.commit()
         except:
             self.conn.rollback()
@@ -186,15 +209,19 @@ class DiscordDatabase:
             if not self.connected:
                 self.connect(self.__constr)
             self.save_message(message)
+            self.save_or_update_discord_user(message.author)
         finally:
             if not self.__stay_open:
                 self.disconnect()
     
     def __handle_message_updated(self, sender: object, old_message: discord.Message, new_message: discord.Message) -> None:
+        if old_message.content == new_message.content and old_message.pinned != new_message.pinned:
+            # message was only pinned, ignore it.
+            return
         try:
             if not self.connected:
                 self.connect(self.__constr)
-            self.update_message_content(new_message)
+            self.update_message_content(old_message, new_message)
         finally:
             if not self.__stay_open:
                 self.disconnect()
